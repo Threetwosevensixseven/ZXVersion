@@ -17,6 +17,8 @@ namespace ZXVersion
         private static string TimeFormatSecs;
         private static bool UpperCase = false;
         private static int Version = 0;
+        private static bool IncludeWidths = false;
+        private static bool IncludeMacros = false;
 
         static void Main(string[] args)
         {
@@ -40,6 +42,8 @@ namespace ZXVersion
                 if (string.IsNullOrEmpty(TimeFormat)) TimeFormatSecs = "HH:mm:ss";
                 string uc = (ConfigurationManager.AppSettings["UpperCase"] ?? "false");
                 bool.TryParse(uc, out UpperCase);
+                IncludeWidths = (ConfigurationManager.AppSettings["IncludeWidths"] ?? "").Trim().ToLower() == "true";
+                IncludeMacros = (ConfigurationManager.AppSettings["IncludeMacros"] ?? "").Trim().ToLower() == "true";
 
                 // Get git version
                 try
@@ -71,67 +75,91 @@ namespace ZXVersion
                 sb.Append(" at ");
                 sb.AppendLine(Upper(now.ToString(TimeFormat)));
                 sb.AppendLine();
-                sb.AppendLine("BuildNo                 macro()");
-                sb.Append("                        db \"");
-                sb.Append(Version.ToString());
-                sb.AppendLine("\"");
-                sb.AppendLine("mend");
-                sb.AppendLine();
+                if (IncludeMacros)
+                {
+                    sb.AppendLine("BuildNo                 macro()");
+                    sb.Append("                        db \"");
+                    sb.Append(Version.ToString());
+                    sb.AppendLine("\"");
+                    sb.AppendLine("mend");
+                    sb.AppendLine();
+                }
                 sb.Append("BuildNoValue            equ \"");
                 sb.Append(Version.ToString());
                 sb.AppendLine("\"");
-                sb.Append("BuildNoWidth            equ 0");
-                foreach (var chr in Version.ToString())
-                    sb.Append(" + FW" + chr.ToString());
+                if (IncludeWidths)
+                {
+                    sb.Append("BuildNoWidth            equ 0");
+                    foreach (var chr in Version.ToString())
+                        sb.Append(" + FW" + chr.ToString());
+                    sb.AppendLine();
+                }
                 sb.AppendLine();
                 sb.AppendLine();
                 sb.AppendLine();
-                sb.AppendLine();
-                sb.AppendLine("BuildDate               macro()");
-                sb.Append("                        db \"");
-                sb.Append(Upper(now.ToString(DateFormat)));
-                sb.AppendLine("\"");
-                sb.AppendLine("mend");
-                sb.AppendLine();
+                if (IncludeMacros)
+                {
+                    sb.AppendLine("BuildDate               macro()");
+                    sb.Append("                        db \"");
+                    sb.Append(Upper(now.ToString(DateFormat)));
+                    sb.AppendLine("\"");
+                    sb.AppendLine("mend");
+                    sb.AppendLine();
+                }
                 sb.Append("BuildDateValue          equ \"");
                 sb.Append(Upper(now.ToString(DateFormat)));
                 sb.AppendLine("\"");
-                sb.Append("BuildDateWidth          equ 0");
-                foreach (var chr in Upper(now.ToString(DateFormat)))
-                    sb.Append(" + FW" + Name(chr.ToString()));
+                if (IncludeWidths)
+                {
+                    sb.Append("BuildDateWidth          equ 0");
+                    foreach (var chr in Upper(now.ToString(DateFormat)))
+                        sb.Append(" + FW" + Name(chr.ToString()));
+                    sb.AppendLine();
+                }
                 sb.AppendLine();
                 sb.AppendLine();
                 sb.AppendLine();
-                sb.AppendLine();
-                sb.AppendLine("BuildTime               macro()");
-                sb.Append("                        db \"");
-                sb.Append(Upper(now.ToString(TimeFormat)));
-                sb.AppendLine("\"");
-                sb.AppendLine("mend");
-                sb.AppendLine();
+                if (IncludeMacros)
+                {
+                    sb.AppendLine("BuildTime               macro()");
+                    sb.Append("                        db \"");
+                    sb.Append(Upper(now.ToString(TimeFormat)));
+                    sb.AppendLine("\"");
+                    sb.AppendLine("mend");
+                    sb.AppendLine();
+                }
                 sb.Append("BuildTimeValue          equ \"");
                 sb.Append(Upper(now.ToString(TimeFormat)));
                 sb.AppendLine("\"");
-                sb.Append("BuildTimeWidth          equ 0");
-                foreach (var chr in Upper(now.ToString(TimeFormat)))
-                    sb.Append(" + FW" + Name(chr.ToString()));
+                if (IncludeWidths)
+                {
+                    sb.Append("BuildTimeWidth          equ 0");
+                    foreach (var chr in Upper(now.ToString(TimeFormat)))
+                        sb.Append(" + FW" + Name(chr.ToString()));
+                    sb.AppendLine();
+                }
                 sb.AppendLine();
                 sb.AppendLine();
                 sb.AppendLine();
-                sb.AppendLine();
-                sb.AppendLine("BuildTimeSecs           macro()");
-                sb.Append("                        db \"");
-                sb.Append(Upper(now.ToString(TimeFormatSecs)));
-                sb.AppendLine("\"");
-                sb.AppendLine("mend");
-                sb.AppendLine();
+                if (IncludeMacros)
+                {
+                    sb.AppendLine("BuildTimeSecs           macro()");
+                    sb.Append("                        db \"");
+                    sb.Append(Upper(now.ToString(TimeFormatSecs)));
+                    sb.AppendLine("\"");
+                    sb.AppendLine("mend");
+                    sb.AppendLine();
+                }
                 sb.Append("BuildTimeSecsValue      equ \"");
                 sb.Append(Upper(now.ToString(TimeFormatSecs)));
                 sb.AppendLine("\"");
-                sb.Append("BuildTimeSecsWidth      equ 0");
-                foreach (var chr in Upper(now.ToString(TimeFormatSecs)))
-                    sb.Append(" + FW" + Name(chr.ToString()));
-                sb.AppendLine();
+                if (IncludeWidths)
+                {
+                    sb.Append("BuildTimeSecsWidth      equ 0");
+                    foreach (var chr in Upper(now.ToString(TimeFormatSecs)))
+                        sb.Append(" + FW" + Name(chr.ToString()));
+                    sb.AppendLine();
+                }
 
                 // Write file
                 System.IO.File.WriteAllText(File, sb.ToString());
