@@ -26,8 +26,19 @@ namespace ZXVersion
             {
                 var now = DateTime.Now;
 
+                // Alternate output file
+                string oarg = args.FirstOrDefault(a => a.StartsWith("-o="));
+                if (oarg != null)
+                {
+                    oarg = (oarg.Substring(3) ?? "").Trim();
+                    if (oarg.StartsWith("\"") && oarg.EndsWith("\""))
+                        oarg = oarg.Substring(1, oarg.Length - 2);
+                    File = oarg;
+                }
+
                 // Create file and directory
-                File = (ConfigurationManager.AppSettings["OutputFile"] ?? "").Trim();
+                if (File == null)
+                    File = (ConfigurationManager.AppSettings["OutputFile"] ?? "").Trim();
                 if (string.IsNullOrEmpty(File)) File = "version.asm";
                 Dir = Path.GetDirectoryName(File);
                 if (!string.IsNullOrEmpty(Dir) && !Directory.Exists(Dir))
@@ -53,6 +64,7 @@ namespace ZXVersion
                     p.StartInfo.UseShellExecute = false;
                     p.StartInfo.RedirectStandardOutput = true;
                     p.StartInfo.Arguments = "rev-list --count HEAD";
+                    // "git rev-parse --short HEAD" will give "0d03e98" etc
                     p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
                     p.Start();
                     string output = p.StandardOutput.ReadToEnd();
