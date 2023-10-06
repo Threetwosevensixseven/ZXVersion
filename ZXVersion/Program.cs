@@ -10,6 +10,7 @@ namespace ZXVersion
 {
     class Program
     {
+        private static Syntax Syntax = Syntax.Zeus;
         private static string File;
         private static string Dir;
         private static string DateFormat;
@@ -19,6 +20,9 @@ namespace ZXVersion
         private static int Version = 0;
         private static bool IncludeWidths = false;
         private static bool IncludeMacros = false;
+        private static bool IncludeStringLiterals = false;
+        private static string Hash = "";
+        private static string HashShort = "";
 
         static void Main(string[] args)
         {
@@ -55,6 +59,9 @@ namespace ZXVersion
                 bool.TryParse(uc, out UpperCase);
                 IncludeWidths = (ConfigurationManager.AppSettings["IncludeWidths"] ?? "").Trim().ToLower() == "true";
                 IncludeMacros = (ConfigurationManager.AppSettings["IncludeMacros"] ?? "").Trim().ToLower() == "true";
+                IncludeStringLiterals = (ConfigurationManager.AppSettings["IncludeStringLiterals"] ?? "").Trim().ToLower() == "true";
+                string syn = (ConfigurationManager.AppSettings["Syntax"] ?? "").Trim().ToLower();
+                if (syn == "sjasmplus") Syntax = Syntax.Sjasmplus;
 
                 // Get git version
                 try
@@ -77,6 +84,48 @@ namespace ZXVersion
                     Version = 0;
                 }
 
+                // Get git long hash
+                try
+                {
+                    var p = new Process();
+                    p.StartInfo.FileName = "git.exe";
+                    p.StartInfo.UseShellExecute = false;
+                    p.StartInfo.RedirectStandardOutput = true;
+                    p.StartInfo.Arguments = "rev-parse HEAD";
+                    // "git rev-parse --short HEAD" will give "0d03e98" etc
+                    p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                    p.Start();
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit();
+                    output = output.Replace("\r", "").Replace("\n", "");
+                    Hash = (output ?? "").Trim();
+                }
+                catch
+                {
+                    Hash = "";
+                }
+
+                // Get git short hash
+                try
+                {
+                    var p = new Process();
+                    p.StartInfo.FileName = "git.exe";
+                    p.StartInfo.UseShellExecute = false;
+                    p.StartInfo.RedirectStandardOutput = true;
+                    p.StartInfo.Arguments = "rev-parse --short HEAD";
+                    // "git rev-parse --short HEAD" will give "0d03e98" etc
+                    p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                    p.Start();
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit();
+                    output = output.Replace("\r", "").Replace("\n", "");
+                    HashShort = Hash.PadRight(36).Substring(0, 7).Trim();
+                }
+                catch
+                {
+                    HashShort = "";
+                }
+
                 // Create file
                 var sb = new StringBuilder();
                 sb.AppendLine("; version.asm");
@@ -89,11 +138,11 @@ namespace ZXVersion
                 sb.AppendLine();
                 if (IncludeMacros)
                 {
-                    sb.AppendLine("BuildNo                 macro()");
+                    StartMacro(sb, "BuildNo");
                     sb.Append("                        db \"");
                     sb.Append(Version.ToString());
                     sb.AppendLine("\"");
-                    sb.AppendLine("mend");
+                    EndMacro(sb);
                     sb.AppendLine();
                 }
                 sb.Append("BuildNoValue            equ \"");
@@ -109,18 +158,46 @@ namespace ZXVersion
                 sb.AppendLine();
                 sb.AppendLine();
                 sb.AppendLine();
+
+                if (IncludeMacros || IncludeStringLiterals)
+                {
+                    if (IncludeMacros)
+                    {
+                        StartMacro(sb, "CommitHash");
+                        sb.Append("                        db \"");
+                        sb.Append(Upper(Hash));
+                        sb.AppendLine("\"");
+                        EndMacro(sb);
+                        sb.AppendLine();
+                        StartMacro(sb, "CommitHashShort");
+                        sb.Append("                        db \"");
+                        sb.Append(Upper(HashShort));
+                        sb.AppendLine("\"");
+                        EndMacro(sb);
+                        sb.AppendLine();
+                    }
+                    if (IncludeStringLiterals)
+                    {
+                        StringLiteral(sb, "CommitHashValue", Upper(Hash));
+                        sb.AppendLine();
+                        StringLiteral(sb, "CommitHashShortValue", Upper(HashShort));
+                        sb.AppendLine();
+                    }
+                }
+
                 if (IncludeMacros)
                 {
-                    sb.AppendLine("BuildDate               macro()");
+                    StartMacro(sb, "BuildDate");
                     sb.Append("                        db \"");
                     sb.Append(Upper(now.ToString(DateFormat)));
                     sb.AppendLine("\"");
-                    sb.AppendLine("mend");
+                    EndMacro(sb);
                     sb.AppendLine();
                 }
-                sb.Append("BuildDateValue          equ \"");
-                sb.Append(Upper(now.ToString(DateFormat)));
-                sb.AppendLine("\"");
+                if (IncludeStringLiterals)
+                {
+                    StringLiteral(sb, "BuildDateValue", Upper(now.ToString(DateFormat)));
+                }
                 if (IncludeWidths)
                 {
                     sb.Append("BuildDateWidth          equ 0");
@@ -133,16 +210,17 @@ namespace ZXVersion
                 sb.AppendLine();
                 if (IncludeMacros)
                 {
-                    sb.AppendLine("BuildTime               macro()");
+                    StartMacro(sb, "BuildTime");
                     sb.Append("                        db \"");
                     sb.Append(Upper(now.ToString(TimeFormat)));
                     sb.AppendLine("\"");
-                    sb.AppendLine("mend");
+                    EndMacro(sb);
                     sb.AppendLine();
                 }
-                sb.Append("BuildTimeValue          equ \"");
-                sb.Append(Upper(now.ToString(TimeFormat)));
-                sb.AppendLine("\"");
+                if (IncludeStringLiterals)
+                {
+                    StringLiteral(sb, "BuildTimeValue", Upper(now.ToString(TimeFormat)));
+                }
                 if (IncludeWidths)
                 {
                     sb.Append("BuildTimeWidth          equ 0");
@@ -155,16 +233,17 @@ namespace ZXVersion
                 sb.AppendLine();
                 if (IncludeMacros)
                 {
-                    sb.AppendLine("BuildTimeSecs           macro()");
+                    StartMacro(sb, "BuildTimeSecs");
                     sb.Append("                        db \"");
                     sb.Append(Upper(now.ToString(TimeFormatSecs)));
                     sb.AppendLine("\"");
-                    sb.AppendLine("mend");
+                    EndMacro(sb);
                     sb.AppendLine();
                 }
-                sb.Append("BuildTimeSecsValue      equ \"");
-                sb.Append(Upper(now.ToString(TimeFormatSecs)));
-                sb.AppendLine("\"");
+                if (IncludeStringLiterals)
+                {
+                    StringLiteral(sb, "BuildTimeSecsValue", Upper(now.ToString(TimeFormatSecs)));
+                }
                 if (IncludeWidths)
                 {
                     sb.Append("BuildTimeSecsWidth      equ 0");
@@ -197,6 +276,50 @@ namespace ZXVersion
             else if (Value == "-") return "Dash";
             else if (Value == ".") return "Period";
             else return Value;
+        }
+
+        private static void StartMacro(StringBuilder sb, string name)
+        {
+            if (Syntax == Syntax.Sjasmplus)
+            {
+                sb.AppendLine("    macro " + (name ?? "").Trim());
+            }
+            else
+            {
+                sb.Append((name ?? "").Trim().PadRight(24));
+                sb.AppendLine("macro()");
+            }
+        }
+
+        private static void EndMacro(StringBuilder sb)
+        {
+            if (Syntax == Syntax.Sjasmplus)
+            {
+                sb.AppendLine("    endm");
+            }
+            else
+            {
+                sb.AppendLine("    mend");
+            }
+        }
+
+        private static void StringLiteral(StringBuilder sb, string Name, string Value)
+        {
+            if (Syntax == Syntax.Sjasmplus)
+            {
+                sb.Append("    define ");
+                sb.Append((Name ?? "").Trim());
+                sb.Append(" \"");
+                sb.Append(Value ?? "");
+                sb.AppendLine("\"");
+            }
+            else
+            {
+                sb.Append((Name ?? "").Trim().PadRight(24));
+                sb.Append("equ \"");
+                sb.Append(Value ?? "");
+                sb.AppendLine("\"");
+            }
         }
     }
 }
