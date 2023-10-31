@@ -145,9 +145,11 @@ namespace ZXVersion
                     EndMacro(sb);
                     sb.AppendLine();
                 }
-                sb.Append("BuildNoValue            equ \"");
-                sb.Append(Version.ToString());
-                sb.AppendLine("\"");
+                if (IncludeStringLiterals)
+                {
+                    StringLiteral(sb, "BuildNoValue", Version.ToString());
+                    sb.AppendLine();
+                }
                 if (IncludeWidths)
                 {
                     sb.Append("BuildNoWidth            equ 0");
