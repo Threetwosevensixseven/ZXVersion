@@ -8,6 +8,7 @@ namespace ZXVersion
     public enum Syntax
     {
         Zeus,
-        Sjasmplus
+        Sjasmplus,
+        DotNetAttributes
     }
 }
