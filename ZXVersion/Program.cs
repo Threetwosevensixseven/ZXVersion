@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ZXVersion
 {
@@ -23,7 +24,8 @@ namespace ZXVersion
         private static bool IncludeStringLiterals = false;
         private static string Hash = "";
         private static string HashShort = "";
-        private static string AssemblyCopyright = "";
+        private static string Copyright = "";
+        private static string CopyrightStartYear = "";
         private static string AssemblyVersion = "";
 
         static void Main(string[] args)
@@ -62,7 +64,12 @@ namespace ZXVersion
                 IncludeWidths = (ConfigurationManager.AppSettings["IncludeWidths"] ?? "").Trim().ToLower() == "true";
                 IncludeMacros = (ConfigurationManager.AppSettings["IncludeMacros"] ?? "").Trim().ToLower() == "true";
                 IncludeStringLiterals = (ConfigurationManager.AppSettings["IncludeStringLiterals"] ?? "").Trim().ToLower() == "true";
-                AssemblyCopyright = (ConfigurationManager.AppSettings["AssemblyCopyright"] ?? "").Trim().Replace("[yyyy]", now.ToString("yyyy"));
+                CopyrightStartYear = (ConfigurationManager.AppSettings["CopyrightStartYear"] ?? "").Trim();
+                Copyright = (ConfigurationManager.AppSettings["Copyright"] ?? "");
+                string copyrightYear = now.ToString("yyyy");
+                if (!string.IsNullOrEmpty(CopyrightStartYear) && copyrightYear != CopyrightStartYear)
+                    copyrightYear = CopyrightStartYear + "-" + now.ToString("yyyy");
+                Copyright = Copyright.Replace("[yyyy]", copyrightYear);
                 AssemblyVersion = (ConfigurationManager.AppSettings["AssemblyVersion"] ?? "").Trim();
                 string syn = (ConfigurationManager.AppSettings["Syntax"] ?? "").Trim().ToLower();
                 if (syn == "sjasmplus") Syntax = Syntax.Sjasmplus;
@@ -144,19 +151,9 @@ namespace ZXVersion
                     sb.AppendLine("using System.Reflection;");
                     sb.AppendLine();
                     sb.AppendLine("[assembly: AssemblyConfiguration(\"" + HashShort + "\")]");
-                    sb.AppendLine("[assembly: AssemblyCopyright(\"" + AssemblyCopyright + "\")]");
+                    sb.AppendLine("[assembly: AssemblyCopyright(\"" + Copyright + "\")]");
                     sb.AppendLine("[assembly: AssemblyVersion(\"" + AssemblyVersion + "\")]");
                     sb.AppendLine("[assembly: AssemblyFileVersion(\"" + AssemblyVersion + "\")]");
-
-                    /*
-                        [assembly: AssemblyConfiguration("abcd1234")]
-                        [assembly: AssemblyCopyright("Copyright © 2020-2024 Robin Verhagen-Guest")]
-                        [assembly: AssemblyVersion("1.2.3.4")]
-                        [assembly: AssemblyFileVersion("5.6.7.8")]
-
-                    */
-
-
                 }
                 else if (Syntax == Syntax.Sjasmplus || Syntax == Syntax.Zeus)
                 {
@@ -286,6 +283,18 @@ namespace ZXVersion
                             sb.Append(" + FW" + Name(chr.ToString()));
                         sb.AppendLine();
 
+                    }
+                    if (IncludeMacros)
+                    {
+                        sb.AppendLine();
+                        StartMacro(sb, "CopyrightMacro");
+                        sb.Append("                        db ");
+                        string copy = "\"" + Copyright.Replace("©", "\", Copyright, \"") + "\"";
+                        copy = copy.Replace("\"\",", "").Replace(",\"\"", "");
+                        sb.Append(copy);
+                        sb.AppendLine();
+                        EndMacro(sb);
+                        sb.AppendLine();
                     }
                 }
 
