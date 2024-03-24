@@ -1,2 +1,2 @@
 # ZXVersion
-Generates build timestamps, git hashes and commit count, in Sjasmplus and Zeus Z80 Assembler macro format.
+Generates build timestamps, git hashes and commit count, in Sjasmplus and Zeus Z80 Assembler macro format, as well as C# assembly properties.
