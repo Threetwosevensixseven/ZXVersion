@@ -27,6 +27,7 @@ namespace ZXVersion
         private static string Copyright = "";
         private static string CopyrightStartYear = "";
         private static string AssemblyVersion = "";
+        private static string AssemblyInformationalVersion = "";
 
         static void Main(string[] args)
         {
@@ -71,6 +72,7 @@ namespace ZXVersion
                     copyrightYear = CopyrightStartYear + "-" + now.ToString("yyyy");
                 Copyright = Copyright.Replace("[yyyy]", copyrightYear);
                 AssemblyVersion = (ConfigurationManager.AppSettings["AssemblyVersion"] ?? "").Trim();
+                AssemblyInformationalVersion = (ConfigurationManager.AppSettings["AssemblyInformationalVersion"] ?? "").Trim();
                 string syn = (ConfigurationManager.AppSettings["Syntax"] ?? "").Trim().ToLower();
                 if (syn == "sjasmplus") Syntax = Syntax.Sjasmplus;
                 else if (syn == "dotnetattributes") Syntax = Syntax.DotNetAttributes;
@@ -138,6 +140,22 @@ namespace ZXVersion
                     HashShort = "";
                 }
 
+                // Substitude git versions and hashes
+                if (AssemblyInformationalVersion.Contains("[GitVersion]"))
+                {
+                    AssemblyInformationalVersion = AssemblyInformationalVersion.Replace("[GitVersion]", Version.ToString());
+                }
+                if (AssemblyInformationalVersion.Contains("[GitHashShort]"))
+                {
+                    string hash = string.IsNullOrWhiteSpace(HashShort) ? "0" : HashShort;
+                    AssemblyInformationalVersion = AssemblyInformationalVersion.Replace("[GitHashShort]", hash);
+                }
+                if (AssemblyInformationalVersion.Contains("[GitHash]"))
+                {
+                    string hash = string.IsNullOrWhiteSpace(Hash) ? "0" : Hash;
+                    AssemblyInformationalVersion = AssemblyInformationalVersion.Replace("[GitHash]", hash);
+                }
+
                 // Create file
                 var sb = new StringBuilder();
 
@@ -154,6 +172,7 @@ namespace ZXVersion
                     sb.AppendLine("[assembly: AssemblyCopyright(\"" + Copyright + "\")]");
                     sb.AppendLine("[assembly: AssemblyVersion(\"" + AssemblyVersion + "\")]");
                     sb.AppendLine("[assembly: AssemblyFileVersion(\"" + AssemblyVersion + "\")]");
+                    sb.AppendLine("[assembly: AssemblyInformationalVersion(\"" + AssemblyInformationalVersion + "\")]");
                 }
                 else if (Syntax == Syntax.Sjasmplus || Syntax == Syntax.Zeus)
                 {
